@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Key Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-generate {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-generate:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
+        }
+        
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+        
+        .btn-clear {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .result-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result-label {
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .result-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .result-meta {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .btn-copy {
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-copy:hover {
+            background: #5568d3;
+        }
+        
+        .btn-copy.copied {
+            background: #10b981;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .success.show {
+            display: block;
+        }
+        
+        .loader {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 8px;
+            vertical-align: middle;
+        }
+        
+        .loader.show {
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .expiry-info {
+            background: #f0f7ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #333;
+        }
+        
+        .instructions {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .instructions strong {
+            color: #333;
+        }
+
+        .plan-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .plan-option {
+            flex: 1;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+
+        .plan-option:hover {
+            border-color: #667eea;
+            background: #f7f8ff;
+        }
+
+        .plan-option input {
+            width: auto;
+            margin-right: 8px;
+            padding: 0;
+            border: none;
+            box-shadow: none;
+        }
+
+        .plan-title {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .plan-meta {
+            display: block;
+            margin-top: 4px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .plan-option.active {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Access Key Generator</h1>
+        <p class="subtitle">Generate secure API access keys for the Aviator prediction system</p>
+        
+        <div class="expiry-info">
+            ℹ️ Select subscription duration before generating a key
+        </div>
+        
+        <form id="keyForm">
+            <div class="form-group">
+                <label>Subscription Plan</label>
+                <div class="plan-options" id="planOptions">
+                    <label class="plan-option active" data-plan="week">
+                        <input type="radio" name="plan" value="week" checked>
+                        <span class="plan-title">Week</span>
+                        <span class="plan-meta">7 days • 10000Tsh</span>
+                    </label>
+                    <label class="plan-option" data-plan="month">
+                        <input type="radio" name="plan" value="month">
+                        <span class="plan-title">Month</span>
+                        <span class="plan-meta">30 days • 30000Tsh</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="keyName">Key Name (Optional)</label>
+                <input 
+                    type="text" 
+                    id="keyName" 
+                    name="keyName"
+                    placeholder="e.g., Production, Testing, Mobile App"
+                    maxlength="100"
+                >
+            </div>
+            
+            <div class="button-group">
+                <button type="button" class="btn-generate" id="generateBtn">
+                    <span class="loader" id="loader"></span>Generate Key
+                </button>
+                <button type="button" class="btn-clear" id="clearBtn">Clear</button>
+            </div>
+        </form>
+        
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+        
+        <div class="result-section">
+            <div class="result-box" id="resultBox">
+                <div class="result-label">Generated Access Key</div>
+                <div class="result-value" id="keyValue"></div>
+                <button type="button" class="btn-copy" id="copyBtn">Copy Key</button>
+                <div class="result-meta">
+                    Generated: <span id="generatedTime"></span><br>
+                    Expires: <span id="expiresTime"></span><br>
+                    Valid For: <span id="validDays"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <strong>How to use:</strong>
+            <ol style="margin-left: 20px; margin-top: 8px;">
+                <li>Generate a key using the form above</li>
+                <li>Copy the key and store it securely</li>
+                <li>Include it in your API requests: <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 2px;">Authorization: Bearer YOUR_KEY</code></li>
+                <li>The key is hashed on the server and cannot be recovered if lost</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('keyForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const keyNameInput = document.getElementById('keyName');
+        const resultBox = document.getElementById('resultBox');
+        const keyValue = document.getElementById('keyValue');
+        const generatedTime = document.getElementById('generatedTime');
+        const expiresTime = document.getElementById('expiresTime');
+        const validDays = document.getElementById('validDays');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        const loader = document.getElementById('loader');
+        
+        generateBtn.addEventListener('click', async () => {
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+            resultBox.classList.remove('show');
+            
+            if (generateBtn.disabled) return;
+            
+            loader.classList.add('show');
+            generateBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/access-keys/generate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({
+                        plan: getSelectedPlan(),
+                        key_name: keyNameInput.value || 'Unnamed Key'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate key');
+                }
+                
+                keyValue.textContent = data.access_key;
+                generatedTime.textContent = new Date().toLocaleString();
+                
+                // Calculate and display expiry info
+                if (data.expires_at) {
+                    const expiryDate = new Date(data.expires_at);
+                    expiresTime.textContent = expiryDate.toLocaleString();
+                    
+                    // Calculate days until expiry
+                    const now = new Date();
+                    const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+                    if (daysLeft > 0) {
+                        validDays.textContent = `${daysLeft} days`;
+                    } else {
+                        validDays.textContent = 'Expired';
+                    }
+                } else {
+                    expiresTime.textContent = 'Never';
+                    validDays.textContent = 'Unlimited';
+                }
+
+                if (data.plan === 'week') {
+                    validDays.textContent = '7 days (Week)';
+                } else if (data.plan === 'month') {
+                    validDays.textContent = '30 days (Month)';
+                }
+                
+                resultBox.classList.add('show');
+                
+                successMsg.textContent = '✓ Key generated successfully!';
+                successMsg.classList.add('show');
+                
+                keyNameInput.value = '';
+                
+            } catch (error) {
+                errorMsg.textContent = '✗ ' + error.message;
+                errorMsg.classList.add('show');
+            } finally {
+                loader.classList.remove('show');
+                generateBtn.disabled = false;
+            }
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            keyNameInput.value = '';
+            resultBox.classList.remove('show');
+            errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
+        });
+        
+        copyBtn.addEventListener('click', () => {
+            const key = keyValue.textContent;
+            navigator.clipboard.writeText(key).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function getSelectedPlan() {
+            const selected = document.querySelector('input[name="plan"]:checked');
+            return selected ? selected.value : 'week';
+        }
+
+        function bindPlanSelectionUI() {
+            const labels = document.querySelectorAll('.plan-option');
+            labels.forEach((label) => {
+                label.addEventListener('click', () => {
+                    labels.forEach((item) => item.classList.remove('active'));
+                    label.classList.add('active');
+                });
+            });
+        }
+
+        bindPlanSelectionUI();
+        
+        // Allow Enter key to generate
+        keyNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                generateBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

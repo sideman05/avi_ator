@@ -1,0 +1,6 @@
+django>=4.2
+requests
+selenium
+gunicorn
+whitenoise
+psycopg2-binary

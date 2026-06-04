@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Monitor Stream</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #0b1220;
+        color: #e6eef8;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        background: rgba(11, 18, 32, 0.96);
+        border-bottom: 1px solid #1f2a44;
+      }
+      .left,
+      .right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+        background: #24304b;
+        color: #e6eef8;
+      }
+      button.primary {
+        background: #2563eb;
+      }
+      button.danger {
+        background: #b91c1c;
+      }
+      button:disabled {
+        opacity: 0.55;http://labs.ctfzone.com:8545
+        cursor: not-allowed;
+      }
+      .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #1e293b;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+      .badge.on {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+      }
+      .badge.off {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+      }
+      main {
+        padding: 16px;
+      }
+      #log {
+        white-space: pre-wrap;
+        line-height: 1.45;
+        font-size: 13px;
+        background: #08101d;
+        border: 1px solid #1f2a44;
+        border-radius: 14px;
+        padding: 14px;
+        min-height: 60vh;
+        overflow: auto;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="left">
+        <strong>Monitor Output</strong>
+        <span id="state" class="badge off">stopped</span>
+        <span id="count" class="badge">0 events</span>
+      </div>
+      <div class="right">
+        <button id="start" class="primary">Start</button>
+        <button id="stop" class="danger">Stop</button>
+        <button id="clear">Clear</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="meta" class="muted">Waiting for events…</div>
+      <div id="log"></div>
+    </main>
+
+    <script>
+      const log = document.getElementById("log");
+      const meta = document.getElementById("meta");
+      const stateBadge = document.getElementById("state");
+      const countBadge = document.getElementById("count");
+      const startBtn = document.getElementById("start");
+      const stopBtn = document.getElementById("stop");
+      const clearBtn = document.getElementById("clear");
+
+      let es = null;
+      let reconnectTimer = null;
+      let reconnectDelay = 1000;
+      let eventCount = 0;
+      const MAX_LINES = 250;
+
+      function setState(running) {
+        stateBadge.textContent = running ? "running" : "stopped";
+        stateBadge.className = "badge " + (running ? "on" : "off");
+        startBtn.disabled = running;
+        stopBtn.disabled = !running;
+      }
+
+      function setCount(count) {
+        countBadge.textContent = `${count} events`;
+      }
+
+      function appendLine(line) {
+        const lines = log.textContent ? log.textContent.split("\n") : [];
+        lines.push(line);
+        while (lines.length > MAX_LINES) lines.shift();
+        log.textContent = lines.join("\n");
+        log.scrollTop = log.scrollHeight;
+      }
+
+      async function refreshStatus() {
+        try {
+          const response = await fetch("status/");
+          const data = await response.json();
+          setState(Boolean(data.running));
+          eventCount = (data.state && data.state.event_count) || eventCount;
+          setCount(eventCount);
+          if (data.state && data.state.last_event) {
+            meta.textContent = `Last event: ${data.state.last_event}`;
+          }
+        } catch (error) {
+          meta.textContent = "Status unavailable";
+        }
+      }
+
+      function cleanupStream() {
+        if (es) {
+          es.close();
+          es = null;
+        }
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      }
+
+      function connectStream() {
+        cleanupStream();
+        es = new EventSource("stream/");
+
+        es.addEventListener("log", (event) => {
+          appendLine(event.data);
+          meta.textContent = event.data;
+          eventCount += 1;
+          setCount(eventCount);
+          reconnectDelay = 1000;
+        });
+
+        es.addEventListener("heartbeat", (event) => {
+          meta.textContent = `Heartbeat: ${event.data}`;
+        });
+
+        es.addEventListener("status", (event) => {
+          setState(event.data !== "stopped");
+          if (event.data === "stopped") {
+            scheduleReconnect();
+          }
+        });
+
+        es.onerror = () => {
+          setState(false);
+          scheduleReconnect();
+        };
+      }
+
+      function scheduleReconnect() {
+        if (reconnectTimer) return;
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          reconnectDelay = Math.min(reconnectDelay * 2, 8000);
+          connectStream();
+        }, reconnectDelay);
+      }
+
+      startBtn.addEventListener("click", async () => {
+        await fetch("start/");
+        await refreshStatus();
+        connectStream();
+      });
+
+      stopBtn.addEventListener("click", async () => {
+        await fetch("stop/");
+        await refreshStatus();
+        cleanupStream();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        log.textContent = "";
+        meta.textContent = "Cleared";
+      });
+
+      refreshStatus().then(() => {
+        if (stateBadge.textContent === "running") {
+          connectStream();
+        }
+      });
+      setInterval(refreshStatus, 5000);
+    </script>
+  </body>
+</html>
