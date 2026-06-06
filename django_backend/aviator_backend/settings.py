@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes', 'on')
 
-default_allowed_hosts = 'localhost,127.0.0.1,.onrender.com' if not DEBUG else '*'
+default_allowed_hosts = 'localhost,127.0.0.1,.onrender.com,.herokuapp.com' if not DEBUG else '*'
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', default_allowed_hosts).split(',') if host.strip()]
 
 INSTALLED_APPS = [
